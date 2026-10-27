@@ -6,3 +6,4 @@ resources:
 - ci-runners.yaml
 - nexus.yaml
 - cert-manager.yaml
+- postgres.yaml

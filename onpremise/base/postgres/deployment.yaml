@@ -22,16 +22,19 @@ spec:
         image: postgres:15
         env:
         - name: POSTGRES_DB
+          value: null
           valueFrom:
             secretKeyRef:
               name: reporter-db-credentials
               key: database
         - name: POSTGRES_USER
+          value: null
           valueFrom:
             secretKeyRef:
               name: reporter-db-credentials
               key: username
         - name: POSTGRES_PASSWORD
+          value: null
           valueFrom:
             secretKeyRef:
               name: reporter-db-credentials

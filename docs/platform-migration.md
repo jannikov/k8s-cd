@@ -8,12 +8,12 @@ Do not uninstall Nexus/runners or delete their PVCs before adoption.
 | Resources | Owner after migration |
 | --- | --- |
 | Eudris Certificate | Argo CD application `eudris` |
-| Reporter Certificate | Argo CD application `reporter` |
+| Reporter Certificate | Argo CD application `postgres` |
 | CI workspace PVC, runner Deployments and their ServiceAccount/RBAC | Argo CD application `ci-runners` |
 | Nexus Deployment, Service and PVC | Argo CD application `nexus` |
 | Namespace `ci`, host directories, registry credentials and runner token Secrets | Ansible |
 | cert-manager and ClusterIssuer | Argo CD application `cert-manager`; Ansible seeds cert-manager on fresh clusters |
-| PostgreSQL Deployment, Service, PVC in `db` | Argo CD application `reporter` |
+| PostgreSQL Deployment, Service, PVC in `db` | Argo CD application `postgres` |
 | Rancher, Keycloak | Ansible (later phases) |
 | k3s, CNI, node packages and initial Argo CD/bootstrap | Ansible |
 
@@ -118,9 +118,12 @@ verify all three cert-manager Deployments, the webhook, ClusterIssuer and existi
 Certificates are healthy. The existing installation was checked at v1.18.2 with
 `installCRDs: true`; no chart upgrade is included in this migration.
 
-## Reporter PostgreSQL adoption
+## Shared PostgreSQL adoption
 
-PostgreSQL is included in the existing `reporter` Application, in namespace `db`.
+PostgreSQL is managed by its own `postgres` Application in namespace `db`.
+Reporter is a consumer; other projects can use separate databases and users on
+the same server. Manifests live in `onpremise/base/postgres` and
+`onpremise/live/postgres`.
 The endpoint stays `postgres.db.svc.cluster.local:5432`, with image `postgres:15`,
 PVC `postgres-pvc`, 5Gi local-path, and the same data mount. Do not change the
 namespace or add an overlay-wide namespace transformer. Namespace and credential
@@ -145,7 +148,7 @@ Only then publish the GitOps change. Argo CD will adopt the existing PVC/Service
 and restart PostgreSQL once to consume Secret references. `Recreate` prevents a
 second database Pod from opening the same data directory during a rollout;
 expect brief database downtime. The PVC has `Prune=false,Delete=false`, and the
-Reporter Application keeps automated pruning disabled. Do not delete the PVC.
+PostgreSQL Application keeps automated pruning disabled. Do not delete the PVC.
 No major-version upgrade or data copy to a new volume is included.
 
 After sync, check `kubectl -n db rollout status deployment/postgres`, PVC Bound,
@@ -160,3 +163,20 @@ Keycloak database remains with Ansible and now waits for GitOps PostgreSQL.
 To roll back a bad spec, revert the deployment manifest while retaining the
 existing PVC. A Secret reference change is not a database password rotation.
 Do not restore a dump over a running database as an automatic rollback action.
+
+### Ownership transfer from Reporter
+
+If Reporter already adopted the database, sync/refresh `reporter` first so it
+stops declaring PostgreSQL, then sync `postgres`. Reporter has pruning disabled,
+so removing these resources from its source preserves the live Deployment,
+Service and PVC. Do not enable pruning or manually delete/prune these resources
+during the handoff. Automatic sync can briefly show SharedResourceWarning until
+Reporter refreshes; only `postgres` should declare them afterward. This move
+changes resource ownership only: database manifests, credentials, PVC and server
+address are unchanged. It does not itself require a PostgreSQL restart.
+
+The existing Secret name `reporter-db-credentials` is retained to avoid a Pod
+template change. It configures the existing PostgreSQL bootstrap account; it is
+not a shared credential to distribute to every project. Provision separate
+roles/databases and application Secrets for additional consumers. No new users
+or databases are created by the ownership transfer.

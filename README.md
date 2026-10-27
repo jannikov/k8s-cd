@@ -80,7 +80,9 @@ bootstrap auto-sync will adopt these resources when the change reaches `main`.
 The `cert-manager` Application manages chart v1.18.2 and ClusterIssuer
 `letsencrypt-prod`; values and issuer configuration live in
 `onpremise/live/cert-manager`. Ansible seeds cert-manager only on a fresh cluster
-before Rancher starts. Rancher and Keycloak remain managed by Ansible. Reporter also owns PostgreSQL
-in namespace `db`. Before publishing the database migration, run
+before Rancher starts. Rancher and Keycloak remain managed by Ansible. The separate `postgres` Application owns shared PostgreSQL
+in namespace `db`, with manifests in `onpremise/base/postgres` and
+`onpremise/live/postgres`. Reporter and other projects connect to the same
+server, using separate databases and users. Before publishing the database migration, run
 `ansible-playbook prepare-reporter-db.yml` from the infrastructure Ansible
 directory to back up the database and prepare its credential Secret.

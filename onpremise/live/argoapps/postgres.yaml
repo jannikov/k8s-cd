@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres
+  namespace: cd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jannikov/k8s-cd.git
+    targetRevision: main
+    path: onpremise/live/postgres
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: db
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
