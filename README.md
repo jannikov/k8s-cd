@@ -31,14 +31,20 @@ does not grant cross-repository writes. No token belongs in Git URLs or manifest
 ## Initial migration
 
 1. Publish this repository on `main` and ensure validation passes.
-2. Ensure Argo CD can read `https://github.com/jannikov/k8s-cd.git`.
+2. Ensure Argo CD is already installed in namespace `cd`.
 3. Compare the rendered overlays against the current application manifests:
    `kubectl kustomize onpremise/live/eudris` and `kubectl kustomize onpremise/live/reporter`.
-4. Switch the existing Applications (do not delete/recreate them):
+4. Register this repository and bootstrap its Applications using the infrastructure
+   repository `rpi-k3s-cluster`:
 
    ```sh
-   kubectl apply -k onpremise/live/argoapps
+   cd /Users/juria/Documents/Sources/home/rpi-k3s-cluster/ansible
+   ansible-playbook playbook.yml --tags argocd-apps
    ```
+
+   Repository connection and bootstrap belong to `rpi-k3s-cluster`; this
+   repository contains the Application definitions, workloads and image versions.
+   The targeted command does not reinstall Argo CD or other cluster components.
 
 5. Confirm both Applications are Healthy/Synced, then publish the updated build
    workflows in Eudris and Reporter. Their legacy `deploy/` directories remain
