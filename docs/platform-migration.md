@@ -14,7 +14,8 @@ Do not uninstall Nexus/runners or delete their PVCs before adoption.
 | Namespace `ci`, host directories, registry credentials and runner token Secrets | Ansible |
 | cert-manager and ClusterIssuer | Argo CD application `cert-manager`; Ansible seeds cert-manager on fresh clusters |
 | PostgreSQL Deployment, Service, PVC in `db` | Argo CD application `postgres` |
-| Rancher, Keycloak | Ansible (later phases) |
+| Keycloak Deployment/Service | Argo CD application `keycloak`; database and Secrets prepared by Ansible |
+| Rancher | Ansible (later phases) |
 | k3s, CNI, node packages and initial Argo CD/bootstrap | Ansible |
 
 The transferred tasks have been removed from the infrastructure playbook.
@@ -72,7 +73,7 @@ Argo CD against competing desired definitions.
 
 ## Deferred phases
 
-Rancher remains on Ansible. Keycloak still needs its own migration. PostgreSQL adoption is described below.
+Rancher remains on Ansible. Keycloak deployment is described below. PostgreSQL adoption is described below.
 Cilium installation/network migration remains a separate Ansible procedure.
 
 ## Live preflight checked on 2026-10-27
@@ -180,3 +181,41 @@ template change. It configures the existing PostgreSQL bootstrap account; it is
 not a shared credential to distribute to every project. Provision separate
 roles/databases and application Secrets for additional consumers. No new users
 or databases are created by the ownership transfer.
+
+## Keycloak initial deployment
+
+The read-only preflight on 2026-10-27 found no Keycloak Helm release, workloads,
+PVC, Secrets or old database initialization Job. This is a new installation,
+not adoption of a running Bitnami release. The official image is pinned to
+`quay.io/keycloak/keycloak:26.8.1`. State is stored in shared PostgreSQL in its
+own database, owned by its own role; no application PVC is needed.
+
+Before publishing the `keycloak` registration, run in the infrastructure repo:
+
+```sh
+cd ansible
+ansible-playbook prepare-keycloak.yml
+```
+
+Shared PostgreSQL must be healthy with `db/reporter-db-credentials` present.
+Ansible prepares Keycloak namespaces/Secrets, creates the role/database if
+absent, and tests password authentication. It does not reset existing role
+passwords. An existing database must already have suitable ownership/schema
+permissions; this procedure does not adopt arbitrary databases. Credentials
+remain in Vault and Kubernetes Secrets. The bootstrap admin is `juri`; keep
+that manifest value aligned if changing `keycloak_admin_user` in Ansible.
+
+Then publish GitOps changes and wait for `keycloak` Healthy/Synced. The LAN
+endpoint is `http://192.168.88.237:30081`, matching the previous NodePort plan.
+The fixed hostname determines issuer and redirect URLs; HTTP access is intended
+for this LAN setup. Configure a stable HTTPS hostname before external use.
+Management port 9000 is only used by Pod health probes and is not published by
+the Service. The startup probe allows up to ten minutes on the Raspberry Pi.
+The admin Secret bootstraps a new installation; editing it does not rotate an
+existing administrator password. The image runs `start`, not development mode.
+
+Verify login and the `master` realm after deployment. Additional realms and
+client settings are not imported or invented by this change. Back up PostgreSQL
+before future Keycloak upgrades, because schema migrations can affect rollback.
+Official references: https://www.keycloak.org/server/containers and
+https://www.keycloak.org/downloads .

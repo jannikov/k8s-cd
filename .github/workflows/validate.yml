@@ -22,6 +22,7 @@ jobs:
           kubectl kustomize onpremise/live/eudris > /dev/null
           kubectl kustomize onpremise/live/reporter > /dev/null
           kubectl kustomize onpremise/live/postgres > /dev/null
+          kubectl kustomize onpremise/live/keycloak > /dev/null
           kubectl kustomize onpremise/live/ci-runners > /dev/null
           kubectl kustomize onpremise/live/nexus > /dev/null
           kubectl kustomize onpremise/live/cert-manager > /dev/null

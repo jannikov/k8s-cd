@@ -7,3 +7,4 @@ resources:
 - nexus.yaml
 - cert-manager.yaml
 - postgres.yaml
+- keycloak.yaml
