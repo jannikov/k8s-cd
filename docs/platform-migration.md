@@ -206,10 +206,10 @@ remain in Vault and Kubernetes Secrets. The bootstrap admin is `juri`; keep
 that manifest value aligned if changing `keycloak_admin_user` in Ansible.
 
 Then publish GitOps changes and wait for `keycloak` Healthy/Synced. The LAN
-endpoint is `http://192.168.88.237:30081`, matching the previous NodePort plan.
-The fixed hostname determines issuer and redirect URLs; HTTP access is intended
-for this LAN setup. Configure a stable HTTPS hostname before external use.
-Management port 9000 is only used by Pod health probes and is not published by
+endpoint is `https://keycloak.moonlight.local:30081`, using direct HTTPS NodePort 30081.
+The fixed hostname determines issuer and redirect URLs; HTTPS uses a cert-manager SelfSigned issuer for the local hostname. Browser
+trust must be configured separately; this is not a publicly trusted certificate.
+Management port 9000 uses HTTPS and is only used by Pod health probes and is not published by
 the Service. The startup probe allows up to ten minutes on the Raspberry Pi.
 The admin Secret bootstraps a new installation; editing it does not rotate an
 existing administrator password. The image runs `start`, not development mode.
@@ -219,3 +219,8 @@ client settings are not imported or invented by this change. Back up PostgreSQL
 before future Keycloak upgrades, because schema migrations can affect rollback.
 Official references: https://www.keycloak.org/server/containers and
 https://www.keycloak.org/downloads .
+
+Keycloak local HTTPS: `https://keycloak.moonlight.local:30081/`. The client must
+resolve `keycloak.moonlight.local` to `192.168.88.237` via local DNS or hosts.
+cert-manager creates and renews `keycloak/keycloak-tls`; no private key is stored
+in Git. The certificate is self-signed and requires explicit client trust.

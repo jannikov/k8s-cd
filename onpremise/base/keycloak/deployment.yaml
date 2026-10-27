@@ -48,16 +48,20 @@ spec:
               name: keycloak-admin-credentials
               key: admin-password
         - name: KC_HTTP_ENABLED
-          value: "true"
+          value: "false"
         - name: KC_HOSTNAME
-          value: http://192.168.88.237:30081
+          value: https://keycloak.moonlight.local:30081
+        - name: KC_HTTPS_CERTIFICATE_FILE
+          value: /etc/keycloak/tls/tls.crt
+        - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+          value: /etc/keycloak/tls/tls.key
         - name: KC_HEALTH_ENABLED
           value: "true"
         - name: KC_CACHE
           value: local
         ports:
-        - name: http
-          containerPort: 8080
+        - name: https
+          containerPort: 8443
         - name: management
           containerPort: 9000
         resources:
@@ -70,16 +74,27 @@ spec:
           httpGet:
             path: /health/started
             port: management
+            scheme: HTTPS
           periodSeconds: 5
           failureThreshold: 120
         readinessProbe:
           httpGet:
             path: /health/ready
             port: management
+            scheme: HTTPS
           periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health/live
             port: management
+            scheme: HTTPS
           periodSeconds: 10
           failureThreshold: 6
+        volumeMounts:
+        - name: https-certificate
+          mountPath: /etc/keycloak/tls
+          readOnly: true
+      volumes:
+      - name: https-certificate
+        secret:
+          secretName: keycloak-tls

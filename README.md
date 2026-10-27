@@ -88,3 +88,21 @@ in namespace `db`, with manifests in `onpremise/base/postgres` and
 server, using separate databases and users. Before publishing the database migration, run
 `ansible-playbook prepare-reporter-db.yml` from the infrastructure Ansible
 directory to back up the database and prepare its credential Secret.
+
+## Service addresses
+
+| Service | Address | Access |
+| --- | --- | --- |
+| Keycloak | https://keycloak.moonlight.local:30081/ | HTTPS NodePort 30081; self-signed certificate |
+| Argo CD | https://argocd.moonlight.local:30080/ | Existing HTTPS NodePort |
+| Rancher | https://rancher.moonlight.local:32037/ | Existing HTTPS NodePort |
+| Nexus | http://nexus.moonlight.local:31081/ | UI and registry endpoint |
+| Eudris | https://eudris.duckdns.org/ | Application Ingress |
+| Reporter | https://oun.me/ | Application Ingress; API under `/api` |
+| PostgreSQL | `postgres.db.svc.cluster.local:5432` | Cluster-internal; individual databases/users per project |
+
+Local names resolve to `192.168.88.237`. Add missing entries in local DNS or the
+client's hosts file, including `keycloak.moonlight.local`. Keycloak serves HTTPS directly through NodePort 30081; include that port
+in its URL. TLS terminates in Keycloak, with no Ingress for this application.
+The Keycloak certificate is self-signed and client trust is configured separately.
+Hubble has no confirmed endpoint in this configuration yet.
