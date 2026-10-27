@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: cd
+spec:
+  project: default
+  sources:
+  - repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.18.2
+    helm:
+      releaseName: cert-manager
+      valueFiles:
+      - $values/onpremise/live/cert-manager/values.yaml
+  - repoURL: https://github.com/jannikov/k8s-cd.git
+    targetRevision: main
+    ref: values
+    path: onpremise/live/cert-manager
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true

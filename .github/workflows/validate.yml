@@ -14,6 +14,7 @@ jobs:
       - uses: azure/setup-kubectl@v4
         with:
           version: v1.34.1
+      - uses: azure/setup-helm@v4
       - name: Validate applications and manifests
         run: |
           set -euo pipefail
@@ -22,5 +23,7 @@ jobs:
           kubectl kustomize onpremise/live/reporter > /dev/null
           kubectl kustomize onpremise/live/ci-runners > /dev/null
           kubectl kustomize onpremise/live/nexus > /dev/null
+          kubectl kustomize onpremise/live/cert-manager > /dev/null
+          helm template cert-manager cert-manager --repo https://charts.jetstack.io --version v1.18.2 --namespace cert-manager -f onpremise/live/cert-manager/values.yaml > /dev/null
           python3 -m unittest discover -s tests
           bash -n scripts/update-image.sh

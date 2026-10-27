@@ -1,0 +1,4 @@
+# Match the existing Helm installation; upgrades are a separate change.
+installCRDs: true
+crds:
+  keep: true

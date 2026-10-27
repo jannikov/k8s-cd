@@ -5,3 +5,4 @@ resources:
 - reporter.yaml
 - ci-runners.yaml
 - nexus.yaml
+- cert-manager.yaml

@@ -12,7 +12,8 @@ Do not uninstall Nexus/runners or delete their PVCs before adoption.
 | CI workspace PVC, runner Deployments and their ServiceAccount/RBAC | Argo CD application `ci-runners` |
 | Nexus Deployment, Service and PVC | Argo CD application `nexus` |
 | Namespace `ci`, host directories, registry credentials and runner token Secrets | Ansible |
-| cert-manager, ClusterIssuer, Rancher, PostgreSQL, Keycloak | Ansible (later phases) |
+| cert-manager and ClusterIssuer | Argo CD application `cert-manager`; Ansible seeds cert-manager on fresh clusters |
+| Rancher, PostgreSQL, Keycloak | Ansible (later phases) |
 | k3s, CNI, node packages and initial Argo CD/bootstrap | Ansible |
 
 The transferred tasks have been removed from the infrastructure playbook.
@@ -70,8 +71,7 @@ Argo CD against competing desired definitions.
 
 ## Deferred phases
 
-cert-manager/ClusterIssuer and Rancher remain on Ansible until Helm release/CRD
-adoption is planned. PostgreSQL/Keycloak need a dedicated data backup and a move
+Rancher remains on Ansible. PostgreSQL/Keycloak need a dedicated data backup and a move
 from inline passwords to Secret references before their manifests can be public.
 Cilium installation/network migration remains a separate Ansible procedure.
 
@@ -94,3 +94,26 @@ No cluster changes were made by these checks. A final server-side diff is still
 recommended at rollout time; live resources may change after this check. The
 historical `kubectl.kubernetes.io/restartedAt` annotation on the Eudris runner
 is intentionally not made into a permanent desired timestamp.
+
+## cert-manager adoption
+
+The `cert-manager` Application combines the official Helm chart v1.18.2 with
+Git-managed values and ClusterIssuer. Release name and namespace stay
+`cert-manager`; existing ACME and certificate Secrets are preserved. The issuer
+runs in sync wave 1 after the chart resources are healthy. CRDs retain the chart's
+`helm.sh/resource-policy: keep` annotation; automatic pruning is disabled.
+Server-side apply avoids the annotation size limit on CRDs.
+
+Ansible only installs the same pinned chart if the controller Deployment is
+absent, to satisfy Rancher's dependency before Argo CD starts. It no longer
+reconciles existing cert-manager installations or the ClusterIssuer. On a fresh
+cluster the issuer arrives through GitOps; certificate issuance may wait for
+that first sync. Do not uninstall the old Helm release: Argo CD renders charts
+without updating Helm's stored release state, which remains historical.
+
+Before publishing, compare `helm template cert-manager cert-manager
+--repo https://charts.jetstack.io --version v1.18.2 --namespace cert-manager
+-f onpremise/live/cert-manager/values.yaml` against the live resources. After sync,
+verify all three cert-manager Deployments, the webhook, ClusterIssuer and existing
+Certificates are healthy. The existing installation was checked at v1.18.2 with
+`installCRDs: true`; no chart upgrade is included in this migration.

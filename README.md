@@ -77,4 +77,7 @@ from Argo CD pruning/application deletion.
 
 See [the migration procedure](docs/platform-migration.md) before publishing:
 bootstrap auto-sync will adopt these resources when the change reaches `main`.
-cert-manager, Rancher, PostgreSQL and Keycloak remain managed by Ansible.
+The `cert-manager` Application manages chart v1.18.2 and ClusterIssuer
+`letsencrypt-prod`; values and issuer configuration live in
+`onpremise/live/cert-manager`. Ansible seeds cert-manager only on a fresh cluster
+before Rancher starts. Rancher, PostgreSQL and Keycloak remain managed by Ansible.
