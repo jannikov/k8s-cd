@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base/reporter/base
+- ../../base/reporter/reporter-api
+- ../../base/reporter/reporter-ui
+
+images:
+- name: 192.168.88.237:31081/ci-docker/reporter-api
+  newTag: 20250909_204126_e4c61c92
+- name: 192.168.88.237:31081/ci-docker/reporter-ui
+  newTag: 20250916_183930_768727de
+

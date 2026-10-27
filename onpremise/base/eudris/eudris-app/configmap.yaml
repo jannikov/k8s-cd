@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eudris-app-config
+  namespace: eudris
+data:
+  appconfig: |
+    {
+      "EVR_BASE_URL": "https://evr-test.veoseleht.ee/",
+      "EVR_ENABLED": "true"
+    }

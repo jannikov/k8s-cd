@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporter-api
+  namespace: reporter
+  labels:
+    app: reporter-api
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: reporter-api
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: reporter-api
+        tier: backend
+    spec:
+      containers:
+        - name: reporter-api
+          image: 192.168.88.237:31081/ci-docker/reporter-api:20250901_201228_18cc4431
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "10m"
+            limits:
+              memory: "150Mi"
+          volumeMounts:
+            - name: reporter-api-config-volume
+              mountPath: "/usr/local/etc/service/config/"
+      volumes:
+        - name: reporter-api-config-volume
+          configMap:
+            name: reporter-api-config
+            items:
+              - key: appconfig
+                path: appsettings.json

@@ -1,0 +1,8 @@
+apiVersion: traefik.io/v1alpha1
+kind: TLSOption
+metadata:
+  name: reporter-tlsoptions
+  namespace: reporter
+spec:
+  minVersion: VersionTLS12
+  sniStrict: true

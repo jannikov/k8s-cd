@@ -1,0 +1,9 @@
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: reporter-tlsstore
+  namespace: reporter
+spec:
+  defaultCertificate:
+    secretName: reporter-tls
+    secretNamespace: default

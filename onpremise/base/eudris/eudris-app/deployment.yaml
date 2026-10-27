@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eudris-app
+  namespace: eudris
+  labels:
+    app: eudris-app
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: eudris-app
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: eudris-app
+        tier: backend
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: eudris-app
+          image: 192.168.88.237:31081/ci-docker/eudris-app:20250901_201228_18cc4431
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: "10m"
+            limits:
+              memory: "750Mi"
+          env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configtree:/etc/eudris/secrets/"
+            - name: EVR_ENABLED
+              value: "true"
+            - name: EVR_BASE_URL
+              value: "https://evr-test.veoseleht.ee"
+
+          volumeMounts:
+            - name: eudris-app-config-volume
+              mountPath: "/usr/local/etc/service/config/"
+            - name: eudris-app-secrets-volume
+              mountPath: "/etc/eudris/secrets/"
+              readOnly: true
+      volumes:
+        - name: eudris-app-secrets-volume
+          secret:
+            secretName: eudris-app-secrets
+        - name: eudris-app-config-volume
+          configMap:
+            name: eudris-app-config
+            items:
+              - key: appconfig
+                path: appsettings.json

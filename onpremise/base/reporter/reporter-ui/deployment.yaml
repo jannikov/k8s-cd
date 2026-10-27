@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporter-ui
+  namespace: reporter
+  labels:
+    app: reporter-ui
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: reporter-ui
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: reporter-ui
+        tier: frontend
+    spec:
+      containers:
+        - name: reporter-ui
+          image: 192.168.88.237:31081/ci-docker/reporter-ui:20250901_201228_18cc4431
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "10m"
+            limits:
+              memory: "150Mi"

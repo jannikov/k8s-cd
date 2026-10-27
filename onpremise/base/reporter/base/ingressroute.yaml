@@ -1,0 +1,24 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: reporter-ingress
+  namespace: reporter
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: PathPrefix(`/api`)
+      services:
+        - name: reporter-api
+          port: 80
+    - kind: Rule
+      match: PathPrefix(`/`)
+      services:
+        - name: reporter-ui
+          port: 80
+  tls:
+    secretName: reporter-tls
+    secretNamespace: default
+    options:
+      name: reporter-tlsoptions
