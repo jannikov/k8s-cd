@@ -96,7 +96,8 @@ directory to back up the database and prepare its credential Secret.
 | Keycloak | https://keycloak.moonlight.local:30081/ | HTTPS NodePort 30081; self-signed certificate |
 | Argo CD | https://argocd.moonlight.local:30080/ | Existing HTTPS NodePort |
 | Rancher | https://rancher.moonlight.local:32037/ | Existing HTTPS NodePort |
-| Nexus | http://nexus.moonlight.local:31081/ | UI and registry endpoint |
+| Nexus UI | https://nexus.moonlight.local:31443/ | HTTPS proxy; self-signed certificate |
+| Nexus registry / CI | http://nexus.moonlight.local:31081/ | Existing HTTP endpoint for push/pull; unchanged |
 | Eudris | https://eudris.duckdns.org/ | Application Ingress |
 | Reporter | https://oun.me/ | Application Ingress; API under `/api` |
 | PostgreSQL | `postgres.db.svc.cluster.local:5432` | Cluster-internal; individual databases/users per project |

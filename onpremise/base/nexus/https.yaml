@@ -1,0 +1,132 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: nexus-selfsigned
+  namespace: ci
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nexus-ui-tls
+  namespace: ci
+spec:
+  secretName: nexus-ui-tls
+  subject:
+    organizations: [Moonlight Home]
+  dnsNames: [nexus.moonlight.local]
+  duration: 2160h
+  renewBefore: 360h
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+  issuerRef:
+    name: nexus-selfsigned
+    kind: Issuer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nexus-https-config
+  namespace: ci
+data:
+  default.conf: |
+    server {
+      listen 8443 ssl;
+      server_name nexus.moonlight.local;
+      ssl_certificate /etc/nginx/tls/tls.crt;
+      ssl_certificate_key /etc/nginx/tls/tls.key;
+      ssl_protocols TLSv1.2 TLSv1.3;
+      client_max_body_size 0;
+      location / {
+        proxy_pass http://nexus:8081;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Port 31443;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 300s;
+        proxy_redirect http://nexus:8081/ https://nexus.moonlight.local:31443/;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus-https
+  namespace: ci
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: nexus-https
+  template:
+    metadata:
+      labels:
+        app: nexus-https
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:stable-alpine
+        command: [/bin/sh, -ec]
+        args:
+        - |
+          nginx -t
+          nginx
+          trap 'nginx -s quit; exit 0' TERM INT
+          previous=$(sha256sum /etc/nginx/tls/tls.crt /etc/nginx/tls/tls.key)
+          while sleep 30; do
+            current=$(sha256sum /etc/nginx/tls/tls.crt /etc/nginx/tls/tls.key)
+            if [ "$current" != "$previous" ]; then
+              nginx -t && nginx -s reload
+              previous="$current"
+            fi
+            kill -0 "$(cat /var/run/nginx.pid)"
+          done
+        ports:
+        - name: https
+          containerPort: 8443
+        readinessProbe:
+          tcpSocket:
+            port: https
+        livenessProbe:
+          tcpSocket:
+            port: https
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            memory: 128Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+        - name: tls
+          mountPath: /etc/nginx/tls
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: nexus-https-config
+      - name: tls
+        secret:
+          secretName: nexus-ui-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-https
+  namespace: ci
+spec:
+  type: NodePort
+  selector:
+    app: nexus-https
+  ports:
+  - name: https
+    port: 443
+    targetPort: https
+    nodePort: 31443

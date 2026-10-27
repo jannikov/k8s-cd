@@ -224,3 +224,18 @@ Keycloak local HTTPS: `https://keycloak.moonlight.local:30081/`. The client must
 resolve `keycloak.moonlight.local` to `192.168.88.237` via local DNS or hosts.
 cert-manager creates and renews `keycloak/keycloak-tls`; no private key is stored
 in Git. The certificate is self-signed and requires explicit client trust.
+
+## Nexus HTTPS UI
+
+The separate `ci/nexus-https` proxy exposes the existing Nexus UI at
+`https://nexus.moonlight.local:31443/`. cert-manager issues a self-signed certificate
+for the local hostname; configure client trust separately. The proxy notices
+certificate rotation and reloads nginx. Its config is mounted as a directory;
+after changing the ConfigMap, restart the proxy Deployment to load new settings.
+
+The existing Nexus Deployment, PVC and Service are unchanged. HTTP NodePort
+31081 remains available for runner/Kaniko push and k3s image pull at
+`192.168.88.237:31081`. No registry clients, credentials or trust settings are
+changed. The HTTPS endpoint is an additional LAN UI entry point, not a mandatory
+registry migration. Local DNS/hosts must resolve nexus.moonlight.local to the
+node. NodePort 31443 must be free on the target cluster before sync.
