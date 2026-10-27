@@ -7,5 +7,5 @@ resources:
 
 images:
 - name: 192.168.88.237:31081/ci-docker/eudris-app
-  newTag: 20261026_192137_65376c5a
+  newTag: 20261027_181010_7261eff4
 
