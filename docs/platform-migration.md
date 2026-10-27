@@ -13,7 +13,8 @@ Do not uninstall Nexus/runners or delete their PVCs before adoption.
 | Nexus Deployment, Service and PVC | Argo CD application `nexus` |
 | Namespace `ci`, host directories, registry credentials and runner token Secrets | Ansible |
 | cert-manager and ClusterIssuer | Argo CD application `cert-manager`; Ansible seeds cert-manager on fresh clusters |
-| Rancher, PostgreSQL, Keycloak | Ansible (later phases) |
+| PostgreSQL Deployment, Service, PVC in `db` | Argo CD application `reporter` |
+| Rancher, Keycloak | Ansible (later phases) |
 | k3s, CNI, node packages and initial Argo CD/bootstrap | Ansible |
 
 The transferred tasks have been removed from the infrastructure playbook.
@@ -71,8 +72,7 @@ Argo CD against competing desired definitions.
 
 ## Deferred phases
 
-Rancher remains on Ansible. PostgreSQL/Keycloak need a dedicated data backup and a move
-from inline passwords to Secret references before their manifests can be public.
+Rancher remains on Ansible. Keycloak still needs its own migration. PostgreSQL adoption is described below.
 Cilium installation/network migration remains a separate Ansible procedure.
 
 ## Live preflight checked on 2026-10-27
@@ -117,3 +117,46 @@ Before publishing, compare `helm template cert-manager cert-manager
 verify all three cert-manager Deployments, the webhook, ClusterIssuer and existing
 Certificates are healthy. The existing installation was checked at v1.18.2 with
 `installCRDs: true`; no chart upgrade is included in this migration.
+
+## Reporter PostgreSQL adoption
+
+PostgreSQL is included in the existing `reporter` Application, in namespace `db`.
+The endpoint stays `postgres.db.svc.cluster.local:5432`, with image `postgres:15`,
+PVC `postgres-pvc`, 5Gi local-path, and the same data mount. Do not change the
+namespace or add an overlay-wide namespace transformer. Namespace and credential
+Secret remain Ansible-owned. No database passwords are committed here.
+
+Before pushing this change to `main`, run from `rpi-k3s-cluster/ansible`:
+
+```sh
+ansible-playbook prepare-reporter-db.yml
+```
+
+This one-time playbook checks Vault against the original inline database
+configuration, creates a private `pg_dumpall` backup of all databases and roles
+under `/var/backups/reporter-postgres` on the node, checks the compressed file,
+and creates `db/reporter-db-credentials`. A mismatch stops preparation; changing
+POSTGRES_PASSWORD does not change the password of an initialized database.
+Copy the resulting backup to your protected off-node backup storage before
+rollout; the node-local dump alone does not cover node/disk loss. Restore has
+not been tested by this migration.
+
+Only then publish the GitOps change. Argo CD will adopt the existing PVC/Service
+and restart PostgreSQL once to consume Secret references. `Recreate` prevents a
+second database Pod from opening the same data directory during a rollout;
+expect brief database downtime. The PVC has `Prune=false,Delete=false`, and the
+Reporter Application keeps automated pruning disabled. Do not delete the PVC.
+No major-version upgrade or data copy to a new volume is included.
+
+After sync, check `kubectl -n db rollout status deployment/postgres`, PVC Bound,
+Reporter database access, and Keycloak if it is deployed against this endpoint.
+The live read-only preflight on 2026-10-27 found volume
+`pvc-1c98cdf9-c94e-407a-bc9c-9435871d646c`, image `postgres:15`, databases
+`postgres` and `reporter`, and no `reporter-db-credentials` Secret yet. Keycloak's
+Ansible configuration points to this server, but its database was not present
+in that listing. Existing data and names are preserved; initialization of the
+Keycloak database remains with Ansible and now waits for GitOps PostgreSQL.
+
+To roll back a bad spec, revert the deployment manifest while retaining the
+existing PVC. A Secret reference change is not a database password rotation.
+Do not restore a dump over a running database as an automatic rollback action.

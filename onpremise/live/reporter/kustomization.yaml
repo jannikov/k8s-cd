@@ -5,6 +5,7 @@ resources:
 - ../../base/reporter/base
 - ../../base/reporter/reporter-api
 - ../../base/reporter/reporter-ui
+- ../../base/reporter/postgres
 
 images:
 - name: 192.168.88.237:31081/ci-docker/reporter-api
