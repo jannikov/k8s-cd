@@ -65,3 +65,16 @@ python3 -m unittest discover -s tests
 
 To roll back an image, revert its tag commit in this repository. Argo CD will
 reconcile the reverted version automatically.
+
+## Platform resources
+
+Certificates for Eudris and Reporter now live beside their ingress manifests.
+`onpremise/base/ci-runners` and `onpremise/base/nexus` contain the existing CI
+workloads and storage; their Applications are registered under
+`onpremise/live/argoapps`. Ansible retains Namespace `ci` and all credential
+Secrets. Deployment history is limited to two old ReplicaSets; PVCs are protected
+from Argo CD pruning/application deletion.
+
+See [the migration procedure](docs/platform-migration.md) before publishing:
+bootstrap auto-sync will adopt these resources when the change reaches `main`.
+cert-manager, Rancher, PostgreSQL and Keycloak remain managed by Ansible.

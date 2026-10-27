@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eudris-github-runner
+  namespace: ci
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eudris-github-runner
+  template:
+    metadata:
+      labels:
+        app: eudris-github-runner
+    spec:
+      serviceAccountName: github-runner-sa
+      initContainers:
+      - name: install-kubectl
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - "set -ex\nARCH=$(uname -m)\ncase \"$ARCH\" in\n  x86_64) ARCH=amd64 ;;\n\
+          \  aarch64) ARCH=arm64 ;;\n  armv7l) ARCH=arm ;;\nesac\nKUBECTL_VERSION=$(curl\
+          \ -L -s https://dl.k8s.io/release/stable.txt)\ncurl -L \"https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl\"\
+          \ -o /shared/kubectl\nchmod +x /shared/kubectl\n"
+        volumeMounts:
+        - name: shared-bin
+          mountPath: /shared
+        env:
+        - &id001
+          name: ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: eudris-github-runner-token
+              key: ACCESS_TOKEN
+      containers:
+      - name: runner
+        image: myoung34/github-runner:latest
+        env:
+        - name: REPO_URL
+          value: https://github.com/jannikov/eudris
+        - name: RUNNER_NAME
+          value: eudris-runner
+        - name: RUNNER_WORKDIR
+          value: /workspace
+        - *id001
+        volumeMounts:
+        - name: shared-bin
+          mountPath: /usr/local/bin
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: shared-bin
+        emptyDir: {}
+      - name: workspace
+        persistentVolumeClaim:
+          claimName: ci-workspace-pvc
+  revisionHistoryLimit: 2

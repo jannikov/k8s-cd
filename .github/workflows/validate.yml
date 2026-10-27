@@ -20,5 +20,7 @@ jobs:
           kubectl kustomize onpremise/live/argoapps > /dev/null
           kubectl kustomize onpremise/live/eudris > /dev/null
           kubectl kustomize onpremise/live/reporter > /dev/null
+          kubectl kustomize onpremise/live/ci-runners > /dev/null
+          kubectl kustomize onpremise/live/nexus > /dev/null
           python3 -m unittest discover -s tests
           bash -n scripts/update-image.sh

@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: eudris-duckdns-org-domain-cert
+  namespace: eudris
+spec:
+  secretName: eudris-tls
+  dnsNames:
+  - eudris.duckdns.org
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer

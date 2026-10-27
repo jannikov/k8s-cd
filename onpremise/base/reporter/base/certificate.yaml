@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: oun-me-domain-cert
+  namespace: reporter
+spec:
+  secretName: reporter-tls
+  dnsNames:
+  - oun.me
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
