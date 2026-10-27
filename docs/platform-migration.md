@@ -135,8 +135,8 @@ Before pushing this change to `main`, run from `rpi-k3s-cluster/ansible`:
 ansible-playbook prepare-reporter-db.yml
 ```
 
-This one-time playbook checks Vault against the original inline database
-configuration, creates a private `pg_dumpall` backup of all databases and roles
+This playbook checks Vault against the database configuration (inline values
+or existing Secret references), creates a private `pg_dumpall` backup of all databases and roles
 under `/var/backups/reporter-postgres` on the node, checks the compressed file,
 and creates `db/reporter-db-credentials`. A mismatch stops preparation; changing
 POSTGRES_PASSWORD does not change the password of an initialized database.
