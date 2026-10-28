@@ -153,3 +153,18 @@ no synthetic network probe is added that might interrupt running builds.
 Argo CD, Rancher and cert-manager keep their upstream installation/chart probes.
 Probe changes update Pod templates and cause rollouts, including a brief
 PostgreSQL interruption. Schedule those changes outside active CI/DB maintenance.
+
+## Nexus stored-secret encryption
+
+The Nexus Deployment mounts `ci/nexus-encryption` read-only and sets
+`NEXUS_SECRETS_KEY_FILE=/etc/nexus-encryption/secrets.json`. Ansible owns that
+Secret; its value is persisted in encrypted Vault, never in GitOps manifests.
+Run `ansible-playbook prepare-nexus-encryption.yml` from the infrastructure
+Ansible directory before publishing the Deployment change. Nexus restarts to
+load the key file, briefly interrupting CI registry traffic.
+
+After a current backup and successful rollout, use `reencrypt-nexus.yml` from
+the infrastructure repository to schedule existing-secret re-encryption and
+verify task success in Nexus. Keep the updated Vault with protected backups;
+PVC backups alone do not contain this external key. See the
+[infrastructure instructions](https://github.com/jannikov/k3s-moonlight/blob/main/README.md#nexus-encryption-key).

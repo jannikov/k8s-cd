@@ -19,6 +19,9 @@ spec:
       containers:
       - name: nexus
         image: sonatype/nexus3:3.97.3@sha256:4b9a0efb605808c15927c751107b3f3308ae306c4b22715c96bf9bbabbb0e736
+        env:
+        - name: NEXUS_SECRETS_KEY_FILE
+          value: /etc/nexus-encryption/secrets.json
         ports:
         - containerPort: 8081
         startupProbe:
@@ -35,7 +38,13 @@ spec:
         volumeMounts:
         - mountPath: /nexus-data
           name: nexus-data
+        - name: encryption-key
+          mountPath: /etc/nexus-encryption
+          readOnly: true
       volumes:
+      - name: encryption-key
+        secret:
+          secretName: nexus-encryption
       - name: nexus-data
         persistentVolumeClaim:
           claimName: nexus-pvc
