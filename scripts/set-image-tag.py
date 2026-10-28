@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Change one known image tag without reformatting the manifests."""
+import json
 import re
 import sys
 from pathlib import Path
@@ -22,7 +23,7 @@ def set_tag(root, project, tag):
         source = (root / "onpremise/base/reporter/reporter-app/live-kustomization.yaml").read_text()
     if len(pattern.findall(source)) != 1:
         raise ValueError(f"Expected exactly one tag for {image} in {path}")
-    updated = pattern.sub(lambda m: m[1] + tag, source)
+    updated = pattern.sub(lambda m: m[1] + json.dumps(tag), source)
     if updated != original:
         path.write_text(updated)
     return path.relative_to(root)
