@@ -4,7 +4,7 @@ import re
 import sys
 from pathlib import Path
 
-PROJECTS = {"eudris-app": "eudris", "reporter-api": "reporter", "reporter-ui": "reporter"}
+PROJECTS = {"eudris-app": "eudris", "reporter-api": "reporter", "reporter-ui": "reporter", "reporter-app": "reporter"}
 
 def set_tag(root, project, tag):
     if project not in PROJECTS:
@@ -15,9 +15,14 @@ def set_tag(root, project, tag):
     image = "192.168.88.237:31081/ci-docker/" + project
     pattern = re.compile(r"(^[ \t]*- name: " + re.escape(image) + r"\n[ \t]+newTag: )[^\n]+", re.MULTILINE)
     original = path.read_text()
-    if len(pattern.findall(original)) != 1:
+    source = original
+    if project == "reporter-app" and image not in source:
+        if "ci-docker/reporter-api" not in source or "ci-docker/reporter-ui" not in source:
+            raise ValueError("Unexpected Reporter configuration; refusing automatic migration")
+        source = (root / "onpremise/base/reporter/reporter-app/live-kustomization.yaml").read_text()
+    if len(pattern.findall(source)) != 1:
         raise ValueError(f"Expected exactly one tag for {image} in {path}")
-    updated = pattern.sub(lambda m: m[1] + tag, original)
+    updated = pattern.sub(lambda m: m[1] + tag, source)
     if updated != original:
         path.write_text(updated)
     return path.relative_to(root)

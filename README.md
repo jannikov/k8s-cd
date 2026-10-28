@@ -106,7 +106,7 @@ on `main` into `.k8s-cd` and run:
 PROJECT=eudris-app IMAGE_TAG=your-built-image-tag bash .k8s-cd/scripts/update-image.sh
 ```
 
-Supported projects: `eudris-app`, `reporter-api`, `reporter-ui`. The script validates
+Supported projects: `eudris-app`, `reporter-app` (legacy: `reporter-api`, `reporter-ui`). The script validates
 the overlay and retries concurrent pushes. The existing `GH_PAT` in each source
 repository's `prod` environment needs Contents read/write access to `k8s-cd`;
 the source repository's `GITHUB_TOKEN` does not grant cross-repository writes.
@@ -168,3 +168,11 @@ the infrastructure repository to schedule existing-secret re-encryption and
 verify task success in Nexus. Keep the updated Vault with protected backups;
 PVC backups alone do not contain this external key. See the
 [infrastructure instructions](https://github.com/jannikov/k3s-moonlight/blob/main/README.md#nexus-encryption-key).
+
+### Reporter: один контейнер
+
+`reporter-app` содержит ASP.NET API и собранный React UI. Один Deployment и Service обслуживают `https://oun.me`, включая `/api`. PostgreSQL остаётся отдельным приложением.
+
+Сначала опубликуйте изменения `k8s-cd`, затем Reporter. Первая успешная сборка `Build Reporter App` публикует образ `reporter-app` и переключает `onpremise/live/reporter/kustomization.yaml` на объединённый Deployment и новый Service. До этого live-конфигурация использует прежние образы. Повторные сборки меняют только тег объединённого образа.
+
+Argo CD не удаляет старые ресурсы автоматически (`prune: false`). После переключения и проверки приложения выполните Ansible playbook `finish-reporter-app-migration.yml` из `rpi-k3s-cluster/ansible`: он проверит готовность нового Deployment и переключение Ingress перед удалением старых Deployment, Service и неиспользуемого ConfigMap.

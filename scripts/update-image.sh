@@ -5,7 +5,7 @@ set -euo pipefail
 : "${IMAGE_TAG:?IMAGE_TAG is required}"
 case "$PROJECT" in
   eudris-app) app=eudris ;;
-  reporter-api|reporter-ui) app=reporter ;;
+  reporter-app|reporter-api|reporter-ui) app=reporter ;;
   *) echo "Unknown project: $PROJECT" >&2; exit 1 ;;
 esac
 cd "$(dirname "$0")/.."

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporter-app
+  namespace: reporter
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: reporter-app
+  template:
+    metadata:
+      labels:
+        app: reporter-app
+    spec:
+      containers:
+      - name: reporter-app
+        image: 192.168.88.237:31081/ci-docker/reporter-app:build-required
+        ports:
+        - name: http
+          containerPort: 80
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 120
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: 128Mi
+            cpu: 10m
+          limits:
+            memory: 256Mi

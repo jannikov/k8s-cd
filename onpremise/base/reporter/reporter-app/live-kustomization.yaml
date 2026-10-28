@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base/reporter/base
+- ../../base/reporter/reporter-app
+images:
+- name: 192.168.88.237:31081/ci-docker/reporter-app
+  newTag: build-required
+patches:
+- target:
+    kind: Ingress
+    name: reporter-ingress
+  patch: |-
+    - op: replace
+      path: /spec/rules/0/http/paths
+      value:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: reporter-app
+            port:
+              number: 80
