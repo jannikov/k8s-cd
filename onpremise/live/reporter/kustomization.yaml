@@ -5,7 +5,7 @@ resources:
 - ../../base/reporter/reporter-app
 images:
 - name: 192.168.88.237:31081/ci-docker/reporter-app
-  newTag: "20261028_203958_90cd2ef1"
+  newTag: "20261028_212903_90cd2ef1"
 patches:
 - target:
     kind: Ingress
