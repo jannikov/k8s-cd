@@ -133,7 +133,7 @@ Secret remain Ansible-owned. No database passwords are committed here.
 Before pushing this change to `main`, run from `rpi-k3s-cluster/ansible`:
 
 ```sh
-ansible-playbook prepare-reporter-db.yml
+ansible-playbook migrations/prepare-reporter-db.yml
 ```
 
 This playbook checks Vault against the database configuration (inline values
