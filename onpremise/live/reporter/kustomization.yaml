@@ -10,5 +10,5 @@ images:
 - name: 192.168.88.237:31081/ci-docker/reporter-api
   newTag: 20261028_194247_93b4ead5
 - name: 192.168.88.237:31081/ci-docker/reporter-ui
-  newTag: 20250916_183930_768727de
+  newTag: 20261028_194727_93b4ead5
 
