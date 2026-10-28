@@ -14,6 +14,7 @@ repositories build images and update their tags here; Argo CD deploys from `main
 | `keycloak` | `onpremise/live/keycloak` | Keycloak using its own database in shared PostgreSQL |
 | `ci-runners` | `onpremise/live/ci-runners` | GitHub runners, workspace PVC and RBAC |
 | `nexus` | `onpremise/live/nexus` | Nexus storage, registry and separate HTTPS UI proxy |
+| `argocd-config` | `onpremise/live/argocd-config` | Argo CD server certificate and local hostname |
 | `cert-manager` | `onpremise/live/cert-manager` and Application Helm source | Pinned chart v1.18.2 and ClusterIssuer |
 
 Reusable manifests live under `onpremise/base`. Child Applications use auto-sync
@@ -25,7 +26,8 @@ registration, Rancher, credential Secrets and database/user preparation. It seed
 cert-manager only on fresh clusters before Rancher starts. Application manifests,
 image tags and cert-manager Certificate/Issuer definitions belong here. Generated
 TLS private keys stay in Kubernetes Secrets; credentials never belong in Git.
-Argo CD and Rancher certificate configuration has not yet been migrated here.
+Argo CD server TLS configuration belongs to `argocd-config`; Rancher still
+manages its own internal certificates.
 
 ## Service addresses
 
@@ -52,17 +54,29 @@ client trust and registry configuration.
 ## Certificates
 
 cert-manager manages Eudris/Reporter certificates through `letsencrypt-prod` and
-Keycloak/Nexus certificates through their local SelfSigned issuers. Local
+Keycloak/Nexus/Argo CD certificates through their local SelfSigned issuers. Local
 self-signed certificates require separate client trust. Keycloak serves TLS
 directly; Nexus terminates TLS in its additional nginx proxy, which reloads
 certificates after rotation.
 
-The read-only audit on **2026-10-27** found an expired certificate in Argo CD's
-`cd/argocd-secret` (expired 2026-09-02), without `argocd.moonlight.local` in its
-DNS names. Replacement/automatic renewal remains outstanding. Rancher's internal
-certificate includes its local hostname and expires 2027-09-14; it is issued by
-Rancher's internal CA, not cert-manager. These findings describe stored cluster
-certificates, not a direct TLS handshake verification of every endpoint.
+The `argocd-config` Application creates `cd/argocd-server-tls` for
+`argocd.moonlight.local` and internal server DNS names. This dedicated Secret
+has priority over the expired certificate previously found in `argocd-secret`.
+Argo CD hot-reloads it without a restart, including future cert-manager renewals.
+The existing `argocd-secret` and its authentication/signing keys are preserved.
+After publishing, confirm issuance and the certificate actually served:
+
+```sh
+kubectl -n cd wait --for=condition=Ready certificate/argocd-server-tls --timeout=180s
+kubectl -n cd get certificate argocd-server-tls
+openssl s_client -connect argocd.moonlight.local:30080 -servername argocd.moonlight.local </dev/null 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+```
+
+The certificate is self-signed: issuing a fresh certificate fixes expiry and
+hostname coverage, but does not automatically establish browser/client trust.
+The endpoint stays `https://argocd.moonlight.local:30080/`.
+Rancher's internal certificate includes its local hostname and was found valid
+until 2027-09-14 during the 2026-10-27 audit; it remains Rancher-managed.
 
 ## Bootstrap and prerequisites
 
@@ -111,3 +125,31 @@ bash -n scripts/update-image.sh
 CI also renders the pinned cert-manager Helm chart. To roll back an image,
 revert its tag commit here. Database schema changes need a separate recovery
 plan; reverting a manifest is not a database restore.
+
+## Platform upgrades
+
+See [the upgrade procedure](docs/platform-upgrades.md) for pinned Argo CD/Nexus
+versions, Nexus offline backup, sequential Rancher upgrades and current chart
+availability. Do not publish the Nexus image change before the backup.
+
+## Startup and readiness checks
+
+| Workload | Startup / readiness check |
+| --- | --- |
+| Eudris | Spring Actuator liveness / readiness endpoints |
+| Reporter API | TCP port 80; current image has no mapped HTTP health endpoint |
+| Reporter UI | HTTP `/index.html` on port 80 |
+| PostgreSQL | `pg_isready` using the configured database and user |
+| Keycloak | HTTPS management health endpoints on port 9000 |
+| Nexus | HTTP `/service/rest/v1/status`, allowing up to 20 minutes for startup |
+| Nexus HTTPS proxy | TCP port 8443; checks the proxy listener independently of Nexus |
+
+Reporter API/PostgreSQL startup checks allow up to ten minutes; Reporter UI and
+Nexus proxy allow 150 seconds. Readiness failures remove Pods from Service
+endpoints without restarting them. Startup failure eventually restarts the
+container. TCP and `pg_isready` do not prove application database queries or
+credentials work. Runner Pods consume GitHub jobs rather than serving requests;
+no synthetic network probe is added that might interrupt running builds.
+Argo CD, Rancher and cert-manager keep their upstream installation/chart probes.
+Probe changes update Pod templates and cause rollouts, including a brief
+PostgreSQL interruption. Schedule those changes outside active CI/DB maintenance.

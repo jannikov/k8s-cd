@@ -8,3 +8,4 @@ resources:
 - cert-manager.yaml
 - postgres.yaml
 - keycloak.yaml
+- argocd-config.yaml

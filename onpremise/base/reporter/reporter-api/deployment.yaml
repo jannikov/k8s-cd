@@ -25,6 +25,18 @@ spec:
           ports:
             - containerPort: 80
               name: http
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 120
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
           resources:
             requests:
               memory: "100Mi"

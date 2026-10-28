@@ -19,6 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           kubectl kustomize onpremise/live/argoapps > /dev/null
+          kubectl kustomize onpremise/live/argocd-config > /dev/null
           kubectl kustomize onpremise/live/eudris > /dev/null
           kubectl kustomize onpremise/live/reporter > /dev/null
           kubectl kustomize onpremise/live/postgres > /dev/null

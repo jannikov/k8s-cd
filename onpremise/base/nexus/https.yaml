@@ -89,9 +89,18 @@ spec:
         ports:
         - name: https
           containerPort: 8443
+        startupProbe:
+          tcpSocket:
+            port: https
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 30
         readinessProbe:
           tcpSocket:
             port: https
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
         livenessProbe:
           tcpSocket:
             port: https

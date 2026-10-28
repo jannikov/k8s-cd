@@ -5,6 +5,9 @@ metadata:
   namespace: ci
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels:
       app: nexus
@@ -15,9 +18,20 @@ spec:
     spec:
       containers:
       - name: nexus
-        image: sonatype/nexus3:latest
+        image: sonatype/nexus3:3.97.3@sha256:4b9a0efb605808c15927c751107b3f3308ae306c4b22715c96bf9bbabbb0e736
         ports:
         - containerPort: 8081
+        startupProbe:
+          httpGet:
+            path: /service/rest/v1/status
+            port: 8081
+          periodSeconds: 10
+          failureThreshold: 120
+        readinessProbe:
+          httpGet:
+            path: /service/rest/v1/status
+            port: 8081
+          periodSeconds: 10
         volumeMounts:
         - mountPath: /nexus-data
           name: nexus-data

@@ -41,6 +41,15 @@ spec:
               key: password
         ports:
         - containerPort: 5432
+        startupProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 120
         readinessProbe:
           exec:
             command:
