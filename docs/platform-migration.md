@@ -130,27 +130,16 @@ PVC `postgres-pvc`, 5Gi local-path, and the same data mount. Do not change the
 namespace or add an overlay-wide namespace transformer. Namespace and credential
 Secret remain Ansible-owned. No database passwords are committed here.
 
-Before pushing this change to `main`, run from `rpi-k3s-cluster/ansible`:
+The PostgreSQL adoption is complete. Its one-time preparation playbook has been
+removed from `rpi-k3s-cluster`; Git history retains the original migration.
+For routine backups, run `ansible-playbook backup-postgres.yml` from
+`rpi-k3s-cluster/ansible` and copy the resulting dump off-node. Credential Secrets
+are restored from Vault by the regular Ansible setup.
 
-```sh
-ansible-playbook migrations/prepare-reporter-db.yml
-```
-
-This playbook checks Vault against the database configuration (inline values
-or existing Secret references), creates a private `pg_dumpall` backup of all databases and roles
-under `/var/backups/reporter-postgres` on the node, checks the compressed file,
-and creates `db/reporter-db-credentials`. A mismatch stops preparation; changing
-POSTGRES_PASSWORD does not change the password of an initialized database.
-Copy the resulting backup to your protected off-node backup storage before
-rollout; the node-local dump alone does not cover node/disk loss. Restore has
-not been tested by this migration.
-
-Only then publish the GitOps change. Argo CD will adopt the existing PVC/Service
-and restart PostgreSQL once to consume Secret references. `Recreate` prevents a
-second database Pod from opening the same data directory during a rollout;
-expect brief database downtime. The PVC has `Prune=false,Delete=false`, and the
-PostgreSQL Application keeps automated pruning disabled. Do not delete the PVC.
-No major-version upgrade or data copy to a new volume is included.
+The following notes describe the historical migration. `Recreate` prevents a
+second database Pod from opening the same data directory during a rollout.
+The PVC has `Prune=false,Delete=false`, and the PostgreSQL Application keeps
+automated pruning disabled. Do not delete the PVC.
 
 After sync, check `kubectl -n db rollout status deployment/postgres`, PVC Bound,
 Reporter database access, and Keycloak if it is deployed against this endpoint.

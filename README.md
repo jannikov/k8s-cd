@@ -174,5 +174,3 @@ PVC backups alone do not contain this external key. See the
 `reporter-app` содержит ASP.NET API и собранный React UI. Один Deployment и Service обслуживают `https://oun.me`, включая `/api`. PostgreSQL остаётся отдельным приложением.
 
 Сначала опубликуйте изменения `k8s-cd`, затем Reporter. Первая успешная сборка `Build Reporter App` публикует образ `reporter-app` и переключает `onpremise/live/reporter/kustomization.yaml` на объединённый Deployment и новый Service. До этого live-конфигурация использует прежние образы. Повторные сборки меняют только тег объединённого образа.
-
-Argo CD не удаляет старые ресурсы автоматически (`prune: false`). После переключения и проверки приложения выполните Ansible playbook `finish-reporter-app-migration.yml` из `rpi-k3s-cluster/ansible`: он проверит готовность нового Deployment и переключение Ingress перед удалением старых Deployment, Service и неиспользуемого ConfigMap.
