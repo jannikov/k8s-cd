@@ -70,6 +70,10 @@ spec:
               value: "true"
             - name: EVR_BASE_URL
               value: "https://evr-test.veoseleht.ee"
+            - name: STORAGE_S3_ENDPOINT
+              value: "http://192.168.88.193:8333"
+            - name: STORAGE_S3_BUCKET
+              value: "eudris"
 
           volumeMounts:
             - name: eudris-app-config-volume
